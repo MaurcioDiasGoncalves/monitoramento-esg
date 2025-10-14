@@ -1,0 +1,103 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: kaique
+      changes:
+        - createTable:
+            tableName: sensores
+            columns:
+              - column:
+                  name: id
+                  type: NUMBER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: nome
+                  type: VARCHAR2(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: localizacao
+                  type: VARCHAR2(100)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 2
+      author: kaique
+      changes:
+        - createTable:
+            tableName: consumo
+            columns:
+              - column:
+                  name: id
+                  type: NUMBER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: sensor_id
+                  type: NUMBER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consumo_kw
+                  type: NUMBER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_hora
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: consumo
+            baseColumnNames: sensor_id
+            referencedTableName: sensores
+            referencedColumnNames: id
+            constraintName: fk_sensor
+
+  - changeSet:
+      id: 3
+      author: kaique
+      changes:
+        - createTable:
+            tableName: alerta_consumo
+            columns:
+              - column:
+                  name: id
+                  type: NUMBER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: sensor_id
+                  type: NUMBER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consumo_kw
+                  type: NUMBER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_hora
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: mensagem
+                  type: VARCHAR2(255)
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: alerta_consumo
+            baseColumnNames: sensor_id
+            referencedTableName: sensores
+            referencedColumnNames: id
+            constraintName: fk_alerta_sensor
