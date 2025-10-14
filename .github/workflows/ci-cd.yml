@@ -10,6 +10,9 @@ permissions:
   contents: read
   packages: write
 
+env:
+  PROJECT_DIR: Projeto-ESG-Integrado
+
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
@@ -24,12 +27,15 @@ jobs:
           java-version: 17
 
       - name: Build with Maven
-        run: mvn clean package -DskipTests
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: mvn -B clean package -DskipTests
 
       - name: Run tests
-        run: mvn test
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: mvn -B test
 
       - name: Save JAR name
+        working-directory: ${{ env.PROJECT_DIR }}
         run: echo "APP_JAR=$(ls target/*.jar | head -n 1)" >> $GITHUB_ENV
 
   docker_build_push:
@@ -52,7 +58,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./${{ env.PROJECT_DIR }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}
@@ -69,31 +75,4 @@ jobs:
 
   deploy_azure:
     needs: docker_build_push
-    runs-on: ubuntu-latest
-    env:
-      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-      REGISTRY_IMAGE: ${{ vars.REGISTRY }}/${{ vars.APP_NAME }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Download image tag
-        uses: actions/download-artifact@v4
-        with:
-          name: image_tag
-          path: .
-
-      - name: Read Tag
-        id: gettag
-        run: echo "TAG=$(cat image_tag.txt)" >> $GITHUB_OUTPUT
-
-      - name: Deploy container to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: ${{ env.REGISTRY_IMAGE }}:${{ steps.gettag.outputs.TAG }}
+    runs-
