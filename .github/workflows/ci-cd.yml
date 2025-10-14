@@ -9,29 +9,34 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write   # necessário para o login no Azure via OIDC (v2)
 
 env:
   PROJECT_DIR: Projeto-ESG-Integrado
-  # Para GHCR:
   REGISTRY_HOST: ghcr.io
-  REGISTRY_NAMESPACE: ${{ github.repository_owner }} # ex.: MaurcioDiasGoncalves
+  REGISTRY_NAMESPACE: ${{ github.repository_owner }}
+  APP_NAME: cidades-esginteligentes   # valor fixo (ou use vars.APP_NAME se já criou no GitHub)
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
+
       - name: Build with Maven
         working-directory: ${{ env.PROJECT_DIR }}
         run: mvn -B clean package -DskipTests
+
       - name: Run tests
         working-directory: ${{ env.PROJECT_DIR }}
         run: mvn -B test
+
       - name: Save JAR name
         working-directory: ${{ env.PROJECT_DIR }}
         run: echo "APP_JAR=$(ls target/*.jar | head -n 1)" >> $GITHUB_ENV
@@ -40,16 +45,14 @@ jobs:
     needs: build_and_test
     runs-on: ubuntu-latest
     env:
-      APP_NAME: ${{ vars.APP_NAME }}                  # ex.: cidades-esginteligentes
       IMAGE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
-      # Login no GHCR usando o GITHUB_TOKEN (não precisa PAT)
-      - name: Log in to GHCR
+      - name: Log in to GHCR (GitHub Container Registry)
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY_HOST }}         # ghcr.io
+          registry: ${{ env.REGISTRY_HOST }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -76,26 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-      APP_NAME: ${{ vars.APP_NAME }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Azure Login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: image_tag
-          path: .
-
-      - name: Read Tag
-        id: gettag
-        run: echo "TAG=$(cat image_tag.txt)" >> $GITHUB_OUTPUT
-
-      - name: Deploy container to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: ${{ env.REGISTRY_HOST }}/${{ env.REGISTRY_NAMESPACE }}/${{ env.APP_NAME }}:${{ steps.gettag.outputs.TAG }}
+          creds: ${{ secrets.AZURE_CREDENTI_
