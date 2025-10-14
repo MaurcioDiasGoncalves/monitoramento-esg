@@ -9,13 +9,13 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write   # necessário para o login no Azure via OIDC (v2)
+  id-token: write   # necessário p/ azure/login@v2 (opcional se usar creds JSON)
 
 env:
   PROJECT_DIR: Projeto-ESG-Integrado
   REGISTRY_HOST: ghcr.io
   REGISTRY_NAMESPACE: ${{ github.repository_owner }}
-  APP_NAME: cidades-esginteligentes   # valor fixo (ou use vars.APP_NAME se já criou no GitHub)
+  APP_NAME: cidades-esginteligentes
 
 jobs:
   build_and_test:
@@ -37,7 +37,7 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: mvn -B test
 
-      - name: Save JAR name
+      - name: Save JAR name (opcional)
         working-directory: ${{ env.PROJECT_DIR }}
         run: echo "APP_JAR=$(ls target/*.jar | head -n 1)" >> $GITHUB_ENV
 
@@ -49,14 +49,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GHCR (GitHub Container Registry)
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: ./${{ env.PROJECT_DIR }}
@@ -79,10 +79,34 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      REGISTRY_HOST: ghcr.io
+      APP_NAME: cidades-esginteligentes
+      REGISTRY_NAMESPACE: ${{ github.repository_owner }}
     steps:
       - uses: actions/checkout@v4
 
+      # Login no Azure usando credenciais JSON em secrets
       - name: Azure Login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTI_
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: image_tag
+          path: .
+
+      - name: Read tag
+        id: gettag
+        run: echo "TAG=$(cat image_tag.txt)" >> $GITHUB_OUTPUT
+
+      # Atualiza o Web App para usar a imagem recém-publicada
+      - name: Deploy container to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: ${{ env.REGISTRY_HOST }}/${{ env.REGISTRY_NAMESPACE }}/${{ env.APP_NAME }}:${{ steps.gettag.outputs.TAG }}
+
+      # (opcional) Reinicia para garantir pull da imagem latest
+      - name: Restart app
+        run: az webapp restart -g RG-ESG -n ${{ env.AZURE_WEBAPP_NAME }}
