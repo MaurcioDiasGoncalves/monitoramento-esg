@@ -14,7 +14,7 @@ permissions:
 env:
   PROJECT_DIR: Projeto-ESG-Integrado
   REGISTRY_HOST: ghcr.io
-  REGISTRY_NAMESPACE: ${{ toLower(github.repository_owner) }}  # força minúsculas
+  REGISTRY_NAMESPACE: maurciodiasgoncalves   # em minúsculas (GHCR exige)
   APP_NAME: cidades-esginteligentes
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
     env:
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
       REGISTRY_HOST: ghcr.io
-      REGISTRY_NAMESPACE: ${{ toLower(github.repository_owner) }}  # força minúsculas aqui também
+      REGISTRY_NAMESPACE: maurciodiasgoncalves
       APP_NAME: cidades-esginteligentes
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: image_tag
-        path: .
+          path: .
 
       - name: Read tag
         id: gettag
